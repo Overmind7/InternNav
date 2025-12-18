@@ -59,6 +59,16 @@ The toolbox supports the most advanced high-quality navigation dataset, InternDa
 
 Please refer to the [documentation](https://internrobotics.github.io/user_guide/internnav/quick_start/index.html) for quick start with InternNav, from installation to training or evaluating supported models.
 
+## 🤖 Real-world Deployment (ROS 1)
+
+We provide a ROS 1-compatible client for executing the InternVLA-N1 closed-loop navigation stack on physical robots.
+
+- **Dependencies:** Ubuntu 20.04 + ROS Noetic with `rospy`, `message_filters`, `cv_bridge`, and `sensor_msgs`, plus Python packages in `requirements/realworld.txt`. Install ROS via `apt` (e.g., `sudo apt install ros-noetic-desktop-full ros-noetic-cv-bridge ros-noetic-image-transport`), source your workspace, and install Python deps with `pip install -r requirements/realworld.txt`.
+- **Topics:** The ROS 1 node expects `/camera/camera/color/image_raw` (RGB), `/camera/camera/aligned_depth_to_color/image_raw` (depth), `/odom_bridge` (odometry), and publishes velocity commands to `/cmd_vel_bridge`. Adjust topic remappings in launch files if your robot uses different names.
+- **Server interaction:** The client sends RGB/Depth frames to the HTTP server on port `5801` (default route `/eval_dual`). Ensure the server is reachable from the robot network.
+- **Run commands:** After building your catkin workspace, launch the client with either `rosrun internnav http_internvla_client_ros1.py` or create a `roslaunch` file that includes the node and the required topic remappings.
+- **Container hint (optional):** For quick setup, start from an Ubuntu 20.04 base with ROS Noetic: `apt-get install ros-noetic-desktop-full` → `source /opt/ros/noetic/setup.bash` → install `python3-catkin-tools`, `cv-bridge`, and project requirements. Mount this repo into the container, build your workspace, then run the node as above.
+
 ## 📦 Overview of Benchmark and Model Zoo
 
 ### Datasets \& Benchmarks
