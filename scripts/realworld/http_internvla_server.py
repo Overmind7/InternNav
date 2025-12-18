@@ -85,6 +85,12 @@ if __name__ == '__main__':
     parser.add_argument("--resize_w", type=int, default=384)
     parser.add_argument("--resize_h", type=int, default=384)
     parser.add_argument("--num_history", type=int, default=8)
+    parser.add_argument(
+        "--plan_step_gap",
+        type=int,
+        default=8,
+        help="Number of frames to skip between planning steps.",
+    )
     args = parser.parse_args()
 
     args.camera_intrinsic = np.array(
