@@ -193,6 +193,9 @@ def planning_thread():
 
 
 class Go2Manager:
+    # Transformation from /aft_mapped to the virtual center (livox_base_link)
+    _CENTER_OFFSET = np.array([-0.28, -0.25])
+
     def __init__(self):
         rgb_down_sub = Subscriber("/camera/camera/color/image_raw", Image, queue_size=1)
         depth_down_sub = Subscriber("/camera/camera/aligned_depth_to_color/image_raw", Image, queue_size=1)
@@ -272,7 +275,11 @@ class Go2Manager:
         zz = msg.pose.pose.orientation.z
         ww = msg.pose.pose.orientation.w
         yaw = math.atan2(2 * zz * ww, 1 - 2 * zz * zz)
-        self.odom = [msg.pose.pose.position.x, msg.pose.pose.position.y, yaw]
+        offset_rotation = np.array([[np.cos(yaw), -np.sin(yaw)], [np.sin(yaw), np.cos(yaw)]])
+        offset_in_world = offset_rotation @ self._CENTER_OFFSET
+        center_x = msg.pose.pose.position.x + offset_in_world[0]
+        center_y = msg.pose.pose.position.y + offset_in_world[1]
+        self.odom = [center_x, center_y, yaw]
         stamp_time = msg.header.stamp.to_sec() if msg.header.stamp else rospy.Time.now().to_sec()
         self.odom_queue.append((stamp_time, copy.deepcopy(self.odom)))
         self.odom_timestamp = stamp_time
@@ -283,7 +290,7 @@ class Go2Manager:
         R0 = np.array([[np.cos(yaw), -np.sin(yaw)], [np.sin(yaw), np.cos(yaw)]])
         self.homo_odom = np.eye(4)
         self.homo_odom[:2, :2] = R0
-        self.homo_odom[:2, 3] = [msg.pose.pose.position.x, msg.pose.pose.position.y]
+        self.homo_odom[:2, 3] = [center_x, center_y]
         self.vel = [msg.twist.twist.linear.x, msg.twist.twist.angular.z]
 
         if self.odom_cnt == 1:
