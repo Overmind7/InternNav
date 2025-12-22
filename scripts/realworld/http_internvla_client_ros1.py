@@ -57,18 +57,18 @@ def pause_for_turn(manager, turn_speed, turn_init_time=TURN_INIT_TIME, turn_init
     if manager is None:
         return
 
-    rate = rospy.Rate(cmd_freq) if cmd_freq > 0 else None
-    end_time = time.time() + turn_init_time
+    publish_interval = 1.0 / cmd_freq if cmd_freq and cmd_freq > 0 else 0.05
+    end_time = time.monotonic() + turn_init_time
     turn_twist = turn_init_twist if turn_init_twist is not None else Twist()
     if turn_init_twist is None:
         turn_twist.angular.z = turn_speed
 
-    while time.time() < end_time and not rospy.is_shutdown():
+    while time.monotonic() < end_time and not rospy.is_shutdown():
         manager.control_pub.publish(turn_twist)
-        if rate is not None:
-            rate.sleep()
-        else:
-            time.sleep(0.05)
+        remaining_time = end_time - time.monotonic()
+        if remaining_time <= 0:
+            break
+        time.sleep(min(publish_interval, remaining_time))
 
 
 def dual_sys_eval(image_bytes, depth_bytes, front_image_bytes, url='http://127.0.0.1:5801/eval_dual'):
