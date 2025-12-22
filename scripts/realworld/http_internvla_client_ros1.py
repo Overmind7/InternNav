@@ -222,7 +222,7 @@ def planning_thread():
 class Go2Manager:
     # Transformation from /aft_mapped to the virtual center (livox_base_link)
     # Default values are taken directly from the provided transform diagram.
-    _CENTER_OFFSET = np.array([-0.28, -0.25])
+    _CENTER_OFFSET = [-0.28, -0.25]
     _CENTER_YAW_OFFSET = math.pi / 2  # radians
 
     def __init__(self):
