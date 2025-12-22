@@ -98,10 +98,11 @@ if __name__ == '__main__':
     )
     agent = InternVLAN1AsyncAgent(args)
     agent.step(
-        np.zeros((480, 640, 3)),
-        np.zeros((480, 640)),
+        np.zeros((480, 640, 3), dtype=np.uint8),
+        np.zeros((480, 640), dtype=np.float32),
         np.eye(4),
         "hello",
+        intrinsic=args.camera_intrinsic
     )
     agent.reset()
 
