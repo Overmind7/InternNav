@@ -48,6 +48,27 @@ rgb_depth_rw_lock = ReadWriteLock()
 odom_rw_lock = ReadWriteLock()
 mpc_rw_lock = ReadWriteLock()
 
+TURN_CMD_FREQ = 20.0
+TURN_INIT_TIME = 0.4
+TURN_ANGULAR_SPEED = 0.5
+
+
+def pause_for_turn(manager, turn_speed, turn_init_time=TURN_INIT_TIME, turn_init_twist=None, cmd_freq=TURN_CMD_FREQ):
+    """Continuously publish a turning command during the initialization window."""
+
+    if manager is None:
+        return
+
+    publish_interval = 1.0 / cmd_freq if cmd_freq > 0 else 0.05
+    end_time = time.time() + turn_init_time
+    turn_twist = turn_init_twist if turn_init_twist is not None else Twist()
+    if turn_init_twist is None:
+        turn_twist.angular.z = turn_speed
+
+    while time.time() < end_time:
+        manager.control_pub.publish(turn_twist)
+        time.sleep(publish_interval)
+
 
 def dual_sys_eval(image_bytes, depth_bytes, front_image_bytes, url='http://127.0.0.1:5801/eval_dual'):
     global policy_init, http_idx, first_running_time
@@ -184,6 +205,9 @@ def planning_thread():
                 current_control_mode = ControlMode.MPC_Mode
             elif 'discrete_action' in response:
                 actions = response['discrete_action']
+                if actions in ([2], [3]):
+                    turn_speed = TURN_ANGULAR_SPEED if actions == [2] else -TURN_ANGULAR_SPEED
+                    pause_for_turn(manager, turn_speed)
                 if actions != [5] and actions != [9]:
                     manager.incremental_change_goal(actions)
                     current_control_mode = ControlMode.PID_Mode

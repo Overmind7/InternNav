@@ -4,6 +4,7 @@ import time
 from internnav.env import Env
 from internnav.env.utils.agilex_extensions.cam import AlignedRealSense
 from internnav.env.utils.agilex_extensions.control import DiscreteRobotController
+from geometry_msgs.msg import Twist
 
 
 @Env.register('realworld')
@@ -57,6 +58,19 @@ class RealWorldEnv(Env):
             if dt < interval:
                 time.sleep(interval - dt)
 
+    def _hold_turn_velocity(self, angular_speed: float):
+        twist = Twist()
+        twist.angular.z = angular_speed
+        publish_interval = 1.0 / max(self.fps, 1)
+        end_time = time.time() + self.duration
+
+        while time.time() < end_time:
+            self.node.cmd_vel_pub.publish(twist)
+            time.sleep(publish_interval)
+
+        twist.angular.z = 0.0
+        self.node.cmd_vel_pub.publish(twist)
+
     def get_observation(self):
         """return most recent frame"""
         with self.lock:
@@ -75,9 +89,9 @@ class RealWorldEnv(Env):
         elif action == 1:
             self.node.move_feedback(self.distance, self.move_speed)
         elif action == 2:
-            self.node.turn(self.angle, self.turn_speed)
+            self._hold_turn_velocity(self.turn_speed)
         elif action == 3:
-            self.node.turn(self.angle, -self.turn_speed)
+            self._hold_turn_velocity(-self.turn_speed)
 
     def close(self):
         self.stop_flag.set()
