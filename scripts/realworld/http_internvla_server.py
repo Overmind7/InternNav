@@ -95,10 +95,17 @@ def annotate_image(idx, image, llm_output, trajectory, pixel_goal, output_dir):
 
             plt.tight_layout(pad=0.3)
 
+            # canvas = FigureCanvasAgg(fig)
+            # canvas.draw()
+            # plot_img = np.frombuffer(canvas.tostring_rgb(), dtype=np.uint8)
+            # plot_img = plot_img.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+
             canvas = FigureCanvasAgg(fig)
             canvas.draw()
-            plot_img = np.frombuffer(canvas.tostring_rgb(), dtype=np.uint8)
-            plot_img = plot_img.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+            
+            buf = np.asarray(canvas.buffer_rgba())   # (H, W, 4)
+            plot_img = buf[:, :, :3].copy()           # 丢掉 alpha
+
             plt.close(fig)
 
             plot_img = cv2.resize(plot_img, (window_size, window_size))
@@ -203,7 +210,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     args.camera_intrinsic = np.array(
-        [[386.5, 0.0, 328.9, 0.0], [0.0, 386.5, 244, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]
+        [[583.721, 0.0, 319.5, 0.0], [0.0, 586.543, 239.5, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]
+        # [[386.5, 0.0, 328.9, 0.0], [0.0, 386.5, 244, 0.0], [0.0, 0.0, 1.0, 0.0], [0.0, 0.0, 0.0, 1.0]]
     )
     agent = InternVLAN1AsyncAgent(args)
     agent.step(
