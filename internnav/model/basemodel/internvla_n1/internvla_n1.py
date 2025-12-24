@@ -14,7 +14,7 @@ from .navdp import NavDP_Policy_DPT_CriticSum_DAT
 
 
 def build_navdp(navdp_cfg):
-    navdp_version = getattr(navdp_cfg, "navdp_version", 0.0)
+    navdp_version = getattr(navdp_cfg, "navdp_version", 0.1)
     navdp_pretrained = getattr(navdp_cfg, "navdp_pretrained", None)
     if navdp_version > 0.0:
         memory_size = 2
@@ -63,7 +63,7 @@ class InternVLAN1MetaModel:
         if not hasattr(navdp_cfg, "navdp_pretrained"):
             setattr(navdp_cfg, "navdp_pretrained", getattr(self.config, "navdp_pretrained", None))
         if not hasattr(navdp_cfg, "navdp_version"):
-            setattr(navdp_cfg, "navdp_version", getattr(self.config, "navdp_version", 0.0))
+            setattr(navdp_cfg, "navdp_version", getattr(self.config, "navdp_version", 0.1))
 
         self.navdp = build_navdp(navdp_cfg)
 
