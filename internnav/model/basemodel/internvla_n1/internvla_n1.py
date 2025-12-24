@@ -14,7 +14,7 @@ from .navdp import NavDP_Policy_DPT_CriticSum_DAT
 
 
 def build_navdp(navdp_cfg):
-    navdp_version = getattr(navdp_cfg, "navdp_version", 0.0)
+    navdp_version = getattr(navdp_cfg, "navdp_version", 0.1)
     if navdp_version > 0.0:
         memory_size = 2
     else:
@@ -30,9 +30,21 @@ def build_navdp(navdp_cfg):
 class InternVLAN1MetaModel:
     def __init__(self, config):
         super(InternVLAN1MetaModel, self).__init__(config)
+        self._ensure_latent_queries_initialized(allow_missing_config=True)
         if hasattr(config, "navdp"):
-            self.latent_queries = nn.Parameter(torch.randn(1, config.n_query, config.hidden_size))
             self.navdp = build_navdp(config)
+
+    def _ensure_latent_queries_initialized(self, *, allow_missing_config: bool = False):
+        if getattr(self, "latent_queries", None) is not None:
+            return
+        missing_fields = [field for field in ("n_query", "hidden_size") if not hasattr(self.config, field)]
+        if missing_fields:
+            if allow_missing_config:
+                return
+            raise ValueError(
+                f"InternVLAN1 requires the following config values to initialize latent queries: {', '.join(missing_fields)}"
+            )
+        self.latent_queries = nn.Parameter(torch.randn(1, self.config.n_query, self.config.hidden_size))
 
     def initialize_vision_modules(self, model_args):
         if getattr(self, 'navdp', None) is None:
@@ -41,9 +53,7 @@ class InternVLAN1MetaModel:
             self.navdp = build_navdp(model_args)
 
         self.config.n_query = model_args.n_query
-        if getattr(self, 'latent_queries', None) is None:
-            print("random initiation the latent_queries !!!")
-            self.latent_queries = nn.Parameter(torch.randn(1, self.config.n_query, self.config.hidden_size))
+        self._ensure_latent_queries_initialized()
 
 
 class InternVLAN1MetaForCausalLM(ABC):
@@ -206,6 +216,8 @@ class InternVLAN1ForCausalLM(Qwen2_5_VLForConditionalGeneration, InternVLAN1Meta
         )
         return_dict = return_dict if return_dict is not None else self.config.use_return_dict
 
+        self.get_model()._ensure_latent_queries_initialized()
+
         if inputs_embeds is None:
             inputs_embeds = self.model.embed_tokens(input_ids)
             n_image_tokens = (input_ids == self.config.image_token_id).sum().item()
@@ -326,6 +338,7 @@ class InternVLAN1ForCausalLM(Qwen2_5_VLForConditionalGeneration, InternVLAN1Meta
         )
 
     def generate_latents(self, input_ids, pixel_values, image_grid_thw):
+        self.get_model()._ensure_latent_queries_initialized()
         input_ids.to(self.get_model().device)
         input_ids = torch.cat([input_ids, torch.tensor([[TRAJ_START_TOKEN_INDEX]]).to(input_ids.device)], dim=1)
         text_embeds = self.get_model().embed_tokens(input_ids)
