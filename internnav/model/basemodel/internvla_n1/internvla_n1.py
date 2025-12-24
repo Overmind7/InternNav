@@ -14,14 +14,15 @@ from .navdp import NavDP_Policy_DPT_CriticSum_DAT
 
 
 def build_navdp(navdp_cfg):
-    navdp_version = getattr(navdp_cfg, "navdp_version", 0.0)
+    navdp_version = getattr(navdp_cfg, "navdp_version", 0.1)
+    navdp_pretrained = getattr(navdp_cfg, "navdp_pretrained", None)
     if navdp_version > 0.0:
         memory_size = 2
     else:
         memory_size = 3
 
     navdp = NavDP_Policy_DPT_CriticSum_DAT(
-        memory_size=memory_size, navdp_pretrained=navdp_cfg.navdp_pretrained, navdp_version=navdp_version
+        memory_size=memory_size, navdp_pretrained=navdp_pretrained, navdp_version=navdp_version
     )
     navdp.load_model()
     return navdp
@@ -31,8 +32,7 @@ class InternVLAN1MetaModel:
     def __init__(self, config):
         super(InternVLAN1MetaModel, self).__init__(config)
         self._ensure_latent_queries_initialized(allow_missing_config=True)
-        if hasattr(config, "navdp"):
-            self.navdp = build_navdp(config)
+        self._ensure_navdp_initialized(config)
 
     def _ensure_latent_queries_initialized(self, *, allow_missing_config: bool = False):
         if getattr(self, "latent_queries", None) is not None:
@@ -50,10 +50,22 @@ class InternVLAN1MetaModel:
         if getattr(self, 'navdp', None) is None:
             self.config.navdp = model_args.navdp
             self.config.navdp_pretrained = model_args.navdp_pretrained
-            self.navdp = build_navdp(model_args)
+            self._ensure_navdp_initialized(model_args)
 
         self.config.n_query = model_args.n_query
         self._ensure_latent_queries_initialized()
+
+    def _ensure_navdp_initialized(self, navdp_cfg=None):
+        if getattr(self, "navdp", None) is not None:
+            return
+
+        navdp_cfg = navdp_cfg or getattr(self.config, "navdp", None) or self.config
+        if not hasattr(navdp_cfg, "navdp_pretrained"):
+            setattr(navdp_cfg, "navdp_pretrained", getattr(self.config, "navdp_pretrained", None))
+        if not hasattr(navdp_cfg, "navdp_version"):
+            setattr(navdp_cfg, "navdp_version", getattr(self.config, "navdp_version", 0.1))
+
+        self.navdp = build_navdp(navdp_cfg)
 
 
 class InternVLAN1MetaForCausalLM(ABC):
